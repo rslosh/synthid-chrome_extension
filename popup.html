@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Is This Image Real?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #242424;
+      --bg-tertiary: #2a2a2a;
+      --text-primary: #f5f5f5;
+      --text-secondary: #aaa;
+      --text-muted: #888;
+      --text-faint: #666;
+      --accent: #f59e0b;
+      --border: #2a2a2a;
+    }
+    
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f5f5f5;
+        --bg-tertiary: #ebebeb;
+        --text-primary: #1a1a1a;
+        --text-secondary: #555;
+        --text-muted: #777;
+        --text-faint: #999;
+        --accent: #d97706;
+        --border: #e5e5e5;
+      }
+    }
+    
+    body {
+      width: 400px;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+    
+    .header {
+      padding: 44px 32px 36px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .header-icon {
+      width: 72px;
+      height: 72px;
+      background: var(--accent);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      font-size: 40px;
+      font-weight: 800;
+      color: #1a1a1a;
+    }
+    
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+    
+    .tagline {
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .content {
+      padding: 28px 32px;
+    }
+    
+    .intro {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+    
+    .steps {
+      list-style: none;
+      margin-bottom: 28px;
+    }
+    
+    .step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      align-items: flex-start;
+    }
+    
+    .step:last-child {
+      margin-bottom: 0;
+    }
+    
+    .step-number {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      color: #1a1a1a;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    
+    .step-content {
+      flex: 1;
+      padding-top: 6px;
+    }
+    
+    .step-text {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+    
+    .step-text:last-child {
+      margin-bottom: 0;
+    }
+    
+    .step-text strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    
+    .highlight {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    
+    .platform-tips {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    
+    .platform-tips strong {
+      color: var(--text-secondary);
+    }
+    
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 0 24px 0;
+    }
+    
+    .disclaimer {
+      padding: 18px 20px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border-left: 3px solid var(--accent);
+    }
+    
+    .disclaimer-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    
+    .disclaimer-text {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    
+    .disclaimer-text strong {
+      color: var(--text-secondary);
+    }
+    
+    .footer {
+      padding: 18px 32px 22px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+    
+    .footer-text {
+      font-size: 13px;
+      color: var(--text-faint);
+    }
+    
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-icon">?</div>
+    <h1>Is This Image Real?</h1>
+    <p class="tagline">AI Image Detector</p>
+  </div>
+  
+  <div class="content">
+    <p class="intro">
+      Check if an image was created by AI in seconds.
+    </p>
+    
+    <ol class="steps">
+      <li class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <div class="step-text">
+            <strong>Right-click</strong> on any image online
+          </div>
+          <div class="platform-tips">
+            <strong>Mac:</strong> Control + click, or two-finger tap on trackpad<br>
+            <strong>Windows:</strong> Right mouse button
+          </div>
+        </div>
+      </li>
+      
+      <li class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <div class="step-text">
+            Select <span class="highlight">"IS THIS IMAGE REAL?"</span>
+          </div>
+        </div>
+      </li>
+      
+      <li class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <div class="step-text">
+            Results in <strong>~10 seconds</strong>
+          </div>
+        </div>
+      </li>
+    </ol>
+    
+    <div class="divider"></div>
+    
+    <div class="disclaimer">
+      <div class="disclaimer-title">Heads up</div>
+      <p class="disclaimer-text">
+        This detects <strong>SynthID</strong> — a hidden watermark in images from <strong>Google AI</strong> (like Nano Banana Pro). It won't detect images from other AI image models, but you can discuss with it if any visible elements from the image look 'AI'.
+      </p>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p class="footer-text">
+      Powered by <a href="https://deepmind.google/technologies/synthid/" target="_blank">Google SynthID</a>
+    </p>
+  </div>
+</body>
+</html>

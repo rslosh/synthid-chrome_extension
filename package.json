@@ -1,0 +1,15 @@
+{
+  "name": "synthid-chrome_extension",
+  "version": "1.0.0",
+  "description": "A simple Chrome extension that helps you check if an image is AI-generated using Google's SynthID technology.",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "canvas": "^3.2.0"
+  }
+}
