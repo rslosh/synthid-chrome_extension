@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Is This Image Real?",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Right-click any image to check if it's AI-generated using Google's SynthID technology",
   "permissions": [
     "contextMenus",
@@ -10,8 +10,7 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://gemini.google.com/*",
-    "<all_urls>"
+    "https://gemini.google.com/*"
   ],
   "background": {
     "service_worker": "background.js"
