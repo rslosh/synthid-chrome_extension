@@ -33,6 +33,22 @@ const POLL_INTERVAL = 500;   // Check every 500ms
   showLoadingOverlay();
   
   try {
+    // ============================================
+    // STEP 0: Check if user is signed in to Gemini
+    // ============================================
+    console.log(`${LOG_PREFIX} Checking sign-in status...`);
+    const signedIn = await checkGeminiSignIn();
+    
+    if (!signedIn) {
+      console.log(`${LOG_PREFIX} User is NOT signed in to Gemini`);
+      hideLoadingOverlay();
+      showSignInRequiredMessage();
+      chrome.runtime.sendMessage({ type: "CHECK_ERROR", error: "Not signed in to Gemini" });
+      return;
+    }
+    
+    console.log(`${LOG_PREFIX} User is signed in, proceeding...`);
+    
     // Wait for Gemini to fully load
     const inputArea = await waitForGeminiReady();
     console.log(`${LOG_PREFIX} Gemini is ready, input area found:`, inputArea);
@@ -118,6 +134,281 @@ function getPendingImage() {
     chrome.runtime.sendMessage({ type: "GET_PENDING_IMAGE" }, (response) => {
       resolve(response);
     });
+  });
+}
+
+/**
+ * Check if user is signed in to Gemini
+ * Returns true if signed in, false otherwise
+ */
+async function checkGeminiSignIn() {
+  // Wait for page to settle
+  await delay(2000);
+  
+  // Check if we're on a sign-in or authentication page
+  const currentUrl = window.location.href;
+  console.log(`${LOG_PREFIX} Current URL:`, currentUrl);
+  
+  // If redirected to accounts.google.com, definitely not signed in
+  if (currentUrl.includes('accounts.google.com')) {
+    console.log(`${LOG_PREFIX} Detected redirect to Google accounts - not signed in`);
+    return false;
+  }
+  
+  // PRIORITY CHECK: Look for user avatar/profile picture FIRST (strongest indicator of signed in)
+  // This appears in the top-right corner when signed in
+  const avatarSelectors = [
+    'img[src*="googleusercontent.com"]',
+    '[aria-label*="Google Account" i]',
+    'button[aria-label*="Account" i]',
+    '[data-ogsr-alt]', // Google profile images often have this
+    'img[alt*="Profile" i]',
+    'img[alt*="Account" i]'
+  ];
+  
+  for (const selector of avatarSelectors) {
+    try {
+      const element = document.querySelector(selector);
+      if (element && element.offsetParent !== null) {
+        console.log(`${LOG_PREFIX} Found user avatar - user IS signed in:`, selector);
+        return true;
+      }
+    } catch (e) {}
+  }
+  
+  // CRITICAL: Look for visible "Sign in" button - this is the PRIMARY indicator of NOT being signed in
+  // Search all links and buttons for "Sign in" text
+  const allClickables = document.querySelectorAll('a, button');
+  for (const el of allClickables) {
+    const text = el.textContent?.trim() || '';
+    const ariaLabel = el.getAttribute('aria-label') || '';
+    const isVisible = el.offsetParent !== null;
+    const rect = el.getBoundingClientRect();
+    
+    // Check if this is a prominent "Sign in" button (not a small link in footer)
+    if (isVisible && rect.width > 50 && rect.height > 20) {
+      if (text === 'Sign in' || ariaLabel.toLowerCase() === 'sign in') {
+        console.log(`${LOG_PREFIX} Found prominent "Sign in" button - user is NOT signed in:`, el);
+        return false;
+      }
+    }
+  }
+  
+  // Check for "Sign in to try" banner (Gemini shows this when not logged in)
+  const pageText = document.body.innerText || '';
+  if (pageText.includes('Sign in to try') || pageText.includes('Sign in to continue')) {
+    console.log(`${LOG_PREFIX} Found "Sign in to try" banner - user is NOT signed in`);
+    return false;
+  }
+  
+  // Look for other sign-in indicators
+  const signInIndicators = [
+    'a[href*="accounts.google.com"]',
+    'button[data-signin]',
+    '[data-idom-class*="sign-in"]',
+  ];
+  
+  for (const selector of signInIndicators) {
+    try {
+      const element = document.querySelector(selector);
+      if (element && element.offsetParent !== null) {
+        const text = element.textContent?.toLowerCase() || '';
+        if (text.includes('sign in') || text.includes('log in')) {
+          console.log(`${LOG_PREFIX} Found sign-in indicator:`, selector, element);
+          return false;
+        }
+      }
+    } catch (e) {}
+  }
+  
+  // Additional text-based sign-in prompts
+  const signInPhrases = [
+    'sign in to continue',
+    'sign in to google',
+    'sign in with google',
+    'log in to continue',
+    'create an account',
+    'before you continue'
+  ];
+  
+  for (const phrase of signInPhrases) {
+    if (pageText.toLowerCase().includes(phrase)) {
+      console.log(`${LOG_PREFIX} Found sign-in phrase in page:`, phrase);
+      return false;
+    }
+  }
+  
+  // If no sign-in buttons found, check for rich chat input (indicates signed-in experience)
+  // Note: Basic input may show even when not signed in, so we look for the RICH textarea
+  const richInput = document.querySelector('rich-textarea');
+  if (richInput) {
+    // Rich textarea exists - check if there's also NO sign-in button visible anywhere
+    const hasSignInAnywhere = Array.from(document.querySelectorAll('*')).some(el => {
+      const text = el.textContent?.trim();
+      return text === 'Sign in' && el.offsetParent !== null;
+    });
+    
+    if (!hasSignInAnywhere) {
+      console.log(`${LOG_PREFIX} Found rich-textarea and no Sign in button - user IS signed in`);
+      return true;
+    }
+  }
+  
+  // Wait a bit more and do final check
+  console.log(`${LOG_PREFIX} No definitive sign-in status, waiting longer...`);
+  await delay(2000);
+  
+  // Final check: Look for any profile-related element in the header area
+  const headerArea = document.querySelector('header') || document.querySelector('[role="banner"]');
+  if (headerArea) {
+    const hasProfile = headerArea.querySelector('img[src*="googleusercontent"]') || 
+                       headerArea.querySelector('[aria-label*="Account" i]');
+    if (hasProfile) {
+      console.log(`${LOG_PREFIX} Final check: Found profile in header - user IS signed in`);
+      return true;
+    }
+    
+    const hasSignIn = Array.from(headerArea.querySelectorAll('a, button')).some(el => 
+      el.textContent?.trim() === 'Sign in'
+    );
+    if (hasSignIn) {
+      console.log(`${LOG_PREFIX} Final check: Found Sign in in header - user is NOT signed in`);
+      return false;
+    }
+  }
+  
+  // Default: If we can't determine, assume NOT signed in (safer to prompt user)
+  console.log(`${LOG_PREFIX} Could not confirm sign-in status, assuming not signed in`);
+  return false;
+}
+
+/**
+ * Show message when user is not signed in to Gemini
+ */
+function showSignInRequiredMessage() {
+  injectStyles();
+  removeAllOverlays();
+  
+  // Detect if user prefers light mode
+  const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches;
+  
+  const colors = isLightMode ? {
+    overlayBg: 'rgba(0, 0, 0, 0.5)',
+    modalBg: '#ffffff',
+    modalBorder: '#e5e5e5',
+    titleColor: '#1a1a1a',
+    textColor: '#666',
+    textStrong: '#1a1a1a',
+    instructionsBg: '#f5f5f5',
+    instructionsText: '#555',
+    accent: '#d97706'
+  } : {
+    overlayBg: 'rgba(0, 0, 0, 0.85)',
+    modalBg: '#1a1a1a',
+    modalBorder: '#2a2a2a',
+    titleColor: '#f5f5f5',
+    textColor: '#888',
+    textStrong: '#f5f5f5',
+    instructionsBg: '#242424',
+    instructionsText: '#aaa',
+    accent: '#f59e0b'
+  };
+  
+  const overlay = document.createElement('div');
+  overlay.id = 'synthid-signin-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: ${colors.overlayBg};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  `;
+  
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: ${colors.modalBg};
+    border: 1px solid ${colors.modalBorder};
+    padding: 48px 52px;
+    border-radius: 24px;
+    box-shadow: 0 24px 80px rgba(0,0,0,${isLightMode ? '0.15' : '0.6'});
+    max-width: 440px;
+    text-align: center;
+  `;
+  
+  modal.innerHTML = `
+    <div style="
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 36px;
+    ">
+      <span style="filter: grayscale(100%) brightness(${isLightMode ? '0.3' : '2'});">🔐</span>
+    </div>
+    <h2 style="margin: 0 0 12px; color: ${colors.titleColor}; font-size: 26px; font-weight: 700;">
+      Sign in to Gemini
+    </h2>
+    <p style="margin: 0 0 28px; color: ${colors.textColor}; font-size: 16px; line-height: 1.7;">
+      To check if this image is AI-generated, you need to be signed in to your Google account first.
+    </p>
+    <div style="
+      background: ${colors.instructionsBg};
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 28px;
+      text-align: left;
+    ">
+      <div style="color: ${colors.accent}; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">
+        How to sign in
+      </div>
+      <ol style="margin: 0; padding-left: 20px; color: ${colors.instructionsText}; font-size: 15px; line-height: 1.8;">
+        <li>Click the <strong style="color: ${colors.textStrong};">Sign in</strong> button on this page</li>
+        <li>Use your Google account</li>
+        <li>Then <strong style="color: ${colors.textStrong};">right-click the image again</strong></li>
+      </ol>
+    </div>
+    <button id="synthid-signin-close" style="
+      background: ${colors.accent};
+      color: #1a1a1a;
+      border: none;
+      padding: 16px 44px;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: transform 0.15s ease;
+    ">
+      Got it
+    </button>
+  `;
+  
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  
+  // Add hover effect
+  const button = document.getElementById('synthid-signin-close');
+  button.addEventListener('mouseenter', () => {
+    button.style.transform = 'scale(1.03)';
+  });
+  button.addEventListener('mouseleave', () => {
+    button.style.transform = 'scale(1)';
+  });
+  
+  // Add click handlers
+  button.addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
   });
 }
 
@@ -1066,9 +1357,9 @@ function showManualSendPrompt() {
  */
 function removeAllOverlays() {
   ['synthid-working', 'synthid-complete', 'synthid-manual', 'synthid-error-overlay',
-   'synthid-typing-toast', 'synthid-uploading-toast', 'synthid-sending-toast', 
-   'synthid-complete-toast', 'image-check-loading-overlay', 'image-check-success-toast',
-   'image-check-test-toast'].forEach(id => {
+   'synthid-signin-overlay', 'synthid-typing-toast', 'synthid-uploading-toast', 
+   'synthid-sending-toast', 'synthid-complete-toast', 'image-check-loading-overlay', 
+   'image-check-success-toast', 'image-check-test-toast'].forEach(id => {
     document.getElementById(id)?.remove();
   });
 }
