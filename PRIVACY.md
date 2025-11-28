@@ -1,10 +1,10 @@
 # Privacy Policy for "Is This Image Real?"
 
-**Last updated:** November 2024
+**Last updated:** November 2025
 
 ## Overview
 
-"Is This Image Real?" is a Chrome extension that helps users check if an image was created by AI using Google's SynthID technology. We are committed to protecting your privacy.
+"Is This Image Real?" is a Chrome extension that helps users check if an image was created by AI using Google's SynthID technology. 
 
 ## Data Collection
 
@@ -59,7 +59,7 @@ The extension uses Chrome's local storage **only** to temporarily hold image dat
 ## Open Source
 
 This extension is open source. You can review the complete source code at:
-https://github.com/[YOUR_USERNAME]/is-this-image-real
+https://github.com/rslosh/synthid-chrome_extension
 
 ## Changes to This Policy
 
